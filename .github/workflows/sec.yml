@@ -1,0 +1,39 @@
+name: SEC quarterly revenue
+
+on:
+  schedule:
+    - cron: "17 21 * * 0"   # Monday 05:17 Taipei
+  push:
+    branches: [main]
+    paths: [scripts/sec_revenue.py, .github/workflows/sec.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sec-data
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch SEC frames
+        env:
+          SEC_UA: ${{ secrets.SEC_UA }}
+        run: python scripts/sec_revenue.py
+      - name: Commit data
+        shell: bash
+        run: |
+          python scripts/check_public.py || exit 1
+          git config user.name "jc-market-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/sec_revenue.csv
+          git diff --cached --quiet || git commit -m "SEC revenue update $(date -u +%F)"
+          git pull --rebase && git push
