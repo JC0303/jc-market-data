@@ -143,3 +143,8 @@ def test_R5_lagged_observation_saved(tmp_path,day):
         assert read_status(tmp_path)['SP500']['result']=='NORMAL_LAG'
     if day==27:
         assert read_status(tmp_path)['SP500']['expected_date']=='2026-11-25'
+
+def test_R6_single_day_futures(tmp_path):
+    market.daily(tmp_path,NOW,getter())
+    url=read_status(tmp_path)['tx_oi']['source_url']
+    assert 'queryStartDate=2026/11/23' in url
