@@ -23,3 +23,11 @@ def test_personal_words_in_a_script_are_blocked(tmp_path, monkeypatch):
     (tmp_path / 'scripts/x.py').write_text("ACCOUNT = '永豐'\n", encoding='utf-8')
     monkeypatch.setattr(check, 'ROOT', tmp_path)
     assert check.problems()
+
+
+def test_personal_column_in_an_approved_market_file_is_blocked(tmp_path, monkeypatch):
+    market = tmp_path / "data/market"
+    market.mkdir(parents=True)
+    (market / "SP500.csv").write_text("date,value,source_url,fetched_utc,client_name\n")
+    monkeypatch.setattr(check, "ROOT", tmp_path)
+    assert any("unexpected CSV columns" in p for p in check.problems())
