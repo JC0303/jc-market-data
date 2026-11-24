@@ -1,9 +1,9 @@
 {
-  "checked_utc": "2026-11-23 17:33 UTC",
-  "checked_taipei": "2026-11-24 01:33",
+  "checked_utc": "2026-11-24 20:31 UTC",
+  "checked_taipei": "2026-11-25 04:31",
   "verdict": "OK",
   "note": "all sources fresh",
-  "expected_trading_day": "2026-11-23",
+  "expected_trading_day": "2026-11-24",
   "expected_revenue_month": "2026-10",
   "failed": [],
   "stale": [],
