@@ -157,7 +157,16 @@ def utc_stamp():
 
 
 def download(url):
-    response = requests.get(url, timeout=(10, 35), headers={"User-Agent": "jc-market-data public research"})
+    for attempt in range(3):
+        time.sleep(2)
+        response = requests.get(url, timeout=(10, 35), allow_redirects=False,
+                                headers={"User-Agent": "jc-market-data public research"})
+        if response.status_code not in (307, 429) or attempt == 2:
+            break
+        wait = response.headers.get("Retry-After", "")
+        if wait and (not wait.isdigit() or int(wait) > 120):
+            break
+        time.sleep(max(5 * 2 ** attempt, int(wait or 0)))
     if response.status_code != 200:
         raise requests.HTTPError(f"HTTP {response.status_code} at {url}", response=response)
     return response.content, utc_stamp()
@@ -241,8 +250,8 @@ def daily(out, now, getter=download, history_problems=None):
         start = expected.replace(day=1)
         if name in FRED:
             start = expected - dt.timedelta(days=35)
-        elif name in DAILY:
-            start = index_days.get(name.split("_")[0], expected)
+        elif name in (*DAILY, "tx_oi"):
+            start = index_days.get("tw" if name == "tx_oi" else name.split("_")[0], expected)
         path = out / f"{name}.csv"
         old = read_series(out, name)
         r = status[name] = dict(source=name, result="FAIL", data_date=max(old, default=""),
@@ -335,7 +344,7 @@ def backfill(out, start, end, getter=download, delay=1):
             if start <= day <= end:
                 ingest(name, day, day)
     for name, series in history.items():
-        if series and not (name in problems and (out / f"{name}.csv").exists()):
+        if series:
             save_series(out, name, series, {})
     return problems
 

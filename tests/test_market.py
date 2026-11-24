@@ -26,7 +26,11 @@ def getter(changes=None):
             template = market.endpoint(name, DAY, DAY)
             if (url.split("?")[0] == template.split("?")[0]
                     and (name not in market.FRED or f"id={name}&" in url)):
-                return changes.get(name, fixture(name)), STAMP
+                body = changes.get(name, fixture(name))
+                if name == "tx_oi" and "queryStartDate=2026/11/23" in url:
+                    lines = body.splitlines()
+                    body = b"\n".join(lines[:1] + [line for line in lines[1:] if line.startswith(b"2026/11/23")])
+                return body, STAMP
         raise AssertionError(url)
     return read
 
