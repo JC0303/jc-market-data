@@ -133,3 +133,13 @@ def test_backfill_merges_observed_dates_and_preserves_old_file_on_source_failure
     assert market.daily(tmp_path, NOW, getter(), history_problems=problems) == 1
     status = read_status(tmp_path)["tw_institution"]
     assert status["fresh"] == "no" and "回補失敗" in status["error"]
+
+@pytest.mark.parametrize("day", [24,25,26,27])
+def test_R5_lagged_observation_saved(tmp_path,day):
+    now=NOW.replace(day=day,hour=18,minute=40)
+    market.daily(tmp_path,now,getter())
+    assert (tmp_path/'SP500.csv').exists()
+    if day==24:
+        assert read_status(tmp_path)['SP500']['result']=='NORMAL_LAG'
+    if day==27:
+        assert read_status(tmp_path)['SP500']['expected_date']=='2026-11-25'
