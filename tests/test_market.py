@@ -148,3 +148,7 @@ def test_R6_single_day_futures(tmp_path):
     market.daily(tmp_path,NOW,getter())
     url=read_status(tmp_path)['tx_oi']['source_url']
     assert 'queryStartDate=2026/11/23' in url
+
+def test_R7_pending_margin(tmp_path):
+    market.daily(tmp_path,NOW,getter({'tw_margin':json.dumps({'stat':'很抱歉，沒有符合條件的資料!'}).encode()}))
+    assert read_status(tmp_path)['tw_margin']['result']=='WAITING'
