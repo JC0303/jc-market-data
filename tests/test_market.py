@@ -193,3 +193,86 @@ def test_friday_close_is_still_expected_over_the_weekend():
     for day in (28,29,30):
         now = NOW.replace(day=day, hour=18, minute=40)
         assert market.expected_date('SP500', now) == dt.date(2026,11,27)
+
+
+def test_fred_read_timeout_recovers_to_ok(tmp_path, monkeypatch):
+    import requests
+    waits = []
+    attempts = []
+    monkeypatch.setattr(market.time, 'sleep', waits.append)
+    def get(url, **kwargs):
+        attempts.append(kwargs['timeout'])
+        if len(attempts) == 1:
+            raise requests.ReadTimeout()
+        response = requests.Response()
+        response.status_code = 200
+        response._content = fixture('SP500')
+        return response
+    monkeypatch.setattr(requests, 'get', get)
+    def fetch(url):
+        if 'id=SP500&' in url:
+            return market.download(url)
+        return getter()(url)
+    market.daily(tmp_path,NOW,fetch)
+    assert read_status(tmp_path)['SP500']['result'] == 'OK'
+    assert attempts == [(10,90), (10,90)] and 10 in waits
+
+
+@pytest.mark.parametrize('limit',[0,2])
+def test_trickle_is_bounded_and_isolates_307(tmp_path,monkeypatch,limit):
+    import requests
+    from scripts import market_sources, r6_backfill as r6
+    market.daily(tmp_path,NOW,getter())
+    before=read_status(tmp_path)
+    calls=[]
+    diag=tmp_path/'diagnosis.md'
+    def open_source(name,client):
+        assert limit
+        def fetch(url):
+            calls.append((name,url))
+            if name=='tw_institution':
+                resp=requests.Response()
+                resp.url=url
+                resp.status_code=307
+                resp.headers['Location']='/notice'
+                resp._content=b'official notice'
+                for hook in client.hooks['response']:
+                    hook(resp)
+                raise requests.HTTPError(response=resp)
+            return getter()(url)
+        return fetch
+    monkeypatch.setattr(market_sources,'TRICKLE_LIMIT',limit,raising=False)
+    monkeypatch.setattr(r6,'session_getter',open_source)
+    r6.trickle(tmp_path,diag)
+    after=read_status(tmp_path)
+    assert all(after[n]['result']==r['result'] for n,r in before.items())
+    if limit:
+        assert diag.exists() and 'official notice' in diag.read_text()
+        assert sum(n=='tw_institution' for n,_ in calls)==1
+        assert after['tw_institution']['backfill_result']=='FAIL'
+        assert any(n=='tw_margin' for n,_ in calls)
+        assert all(sum(n==source for n,_ in calls)<=limit for source in r6.PAGES)
+        assert 'dayDate=20261102' in next(u for n,u in calls if n=='tw_institution')
+    else:
+        assert not calls
+
+
+@pytest.mark.parametrize('timeout_type', ['ConnectTimeout', 'ReadTimeout'])
+def test_exhausted_fred_retry_keeps_last_verified_file(tmp_path,monkeypatch,timeout_type):
+    import requests
+    market.daily(tmp_path,NOW,getter())
+    path=tmp_path/'SP500.csv'
+    previous=path.read_bytes()
+    waits=[]
+    attempts=[]
+    monkeypatch.setattr(market.time,'sleep',waits.append)
+    def timeout(url, **kwargs):
+        attempts.append(kwargs['timeout'])
+        raise getattr(requests,timeout_type)()
+    monkeypatch.setattr(requests,'get',timeout)
+    def fetch(url):
+        return market.download(url) if 'id=SP500&' in url else getter()(url)
+    assert market.daily(tmp_path,NOW,fetch)==1
+    assert read_status(tmp_path)['SP500']['result']=='FAIL'
+    assert attempts==[(10,90)]*3 and [s for s in waits if s!=2]==[10,20]
+    assert path.read_bytes()==previous

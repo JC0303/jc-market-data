@@ -25,7 +25,8 @@ else:
 
 OUT = Path(__file__).resolve().parents[1] / "data/market"
 STATUS = ("source", "result", "data_date", "observed_date", "expected_date", "fresh", "stale_kept",
-          "source_url", "fetched_utc", "error", "history_start", "history_rows", "missing_tw_sessions", "pending_dates")
+          "source_url", "fetched_utc", "error", "history_start", "history_rows", "missing_tw_sessions", "pending_dates",
+          "backfill_result", "backfill_attempted", "backfill_added", "backfill_error")
 
 
 def number(value):
@@ -158,11 +159,18 @@ def utc_stamp():
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
 
-def download(url):
+def download(url, client=requests, headers=None):
+    is_fred = url.startswith("https://fred.stlouisfed.org/graph/fredgraph.csv?")
     for attempt in range(3):
         time.sleep(2)
-        response = requests.get(url, timeout=(10, 35), allow_redirects=False,
-                                headers={"User-Agent": "jc-market-data public research"})
+        try:
+            response = client.get(url, timeout=(10, 90 if is_fred else 35), allow_redirects=False,
+                                  headers=headers or {"User-Agent": "jc-market-data public research"})
+        except (requests.ReadTimeout, requests.ConnectTimeout):
+            if not is_fred or attempt == 2:
+                raise
+            time.sleep(10 * (attempt + 1))
+            continue
         if response.status_code not in (307, 429) or attempt == 2:
             break
         wait = response.headers.get("Retry-After", "")
@@ -421,7 +429,11 @@ def main():
             parser.error("歷史起點晚於預期交易日")
         problems = backfill(OUT, args.backfill_from, end)
         now = dt.datetime.now(dt.timezone.utc)
-    return daily(OUT, now, history_problems=problems)
+    result = daily(OUT, now, history_problems=problems)
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+            print("status_written=true", file=output)
+    return result
 
 
 if __name__ == "__main__":

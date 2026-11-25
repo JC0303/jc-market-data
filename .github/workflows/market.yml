@@ -18,25 +18,28 @@ defaults:
 jobs:
   market:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install requests pytest holidays==0.109
+      - run: python -m pip install -r requirements.txt
       - run: python -m pytest -q
       - name: 蒐集官方資料並保留失敗狀態
         id: fetch
         run: |
           set -o pipefail
           python scripts/fetch_market.py | tee "$RUNNER_TEMP/market.log"
+      - name: 逐來源涓流回補
+        if: "!cancelled() && steps.fetch.outputs.status_written == 'true'"
+        run: python scripts/r6_backfill.py --trickle
       - name: 檢查公開資料並提交本次狀態
         if: "!cancelled() && (steps.fetch.outcome == 'success' || steps.fetch.outcome == 'failure')"
         run: |
           set -euo pipefail
           python scripts/check_public.py
-          git add -- data/market
+          git add -- data/market results/r6_307_diagnosis.md
           if ! git diff --cached --quiet; then
             git config user.name jc-market-data-bot
             git config user.email actions@users.noreply.github.com
