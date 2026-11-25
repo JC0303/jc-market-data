@@ -648,6 +648,7 @@ date,dealer_long,dealer_short,dealer_net,trust_long,trust_short,trust_net,foreig
 2026-07-29,7399,4847,2552,78241,3499,74742,11982,94767,-82785,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/07/01&queryEndDate=2026/07/31&commodityId=TXF,2026-11-24T07:58:47+00:00
 2026-07-30,6991,4995,1996,79257,3400,75857,13822,94839,-81017,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/07/01&queryEndDate=2026/07/31&commodityId=TXF,2026-11-24T07:58:47+00:00
 2026-07-31,4767,7144,-2377,88383,3058,85325,12704,95219,-82515,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/07/01&queryEndDate=2026/07/31&commodityId=TXF,2026-11-24T07:58:47+00:00
+2026-08-03,5669,4951,718,87038,3138,83900,9876,99914,-90038,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/08/03&queryEndDate=2026/08/03&commodityId=TXF,2026-11-25T20:37:37+00:00
 2026-08-04,6692,4336,2356,85936,3388,82548,8626,96484,-87858,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/08/04&queryEndDate=2026/08/31&commodityId=TXF,2026-11-24T08:33:08+00:00
 2026-08-05,5799,4488,1311,88007,3432,84575,9180,96379,-87199,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/08/04&queryEndDate=2026/08/31&commodityId=TXF,2026-11-24T08:33:08+00:00
 2026-08-06,7060,4458,2602,87666,3503,84163,8953,98336,-89383,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/08/04&queryEndDate=2026/08/31&commodityId=TXF,2026-11-24T08:33:08+00:00
@@ -724,3 +725,4 @@ date,dealer_long,dealer_short,dealer_net,trust_long,trust_short,trust_net,foreig
 2026-11-20,4128,3846,282,91618,4019,87599,16303,114166,-97863,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026%2F11%2F02&queryEndDate=2026%2F11%2F23&commodityId=TXF,2026-11-24T07:57:03+00:00
 2026-11-23,4472,3154,1318,97312,3747,93565,14599,118031,-103432,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026%2F11%2F02&queryEndDate=2026%2F11%2F23&commodityId=TXF,2026-11-24T07:57:03+00:00
 2026-11-24,4666,4899,-233,101301,3287,98014,12852,116034,-103182,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/11/24&queryEndDate=2026/11/24&commodityId=TXF,2026-11-25T01:33:33+00:00
+2026-11-25,3247,3898,-651,104614,3696,100918,11439,117148,-105709,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/11/25&queryEndDate=2026/11/25&commodityId=TXF,2026-11-25T20:37:39+00:00
