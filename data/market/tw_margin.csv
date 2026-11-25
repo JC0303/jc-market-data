@@ -86,3 +86,4 @@ date,financing_units,short_units,financing_thousand_twd,source_url,fetched_utc
 2026-11-19,8947619,209819,484368330,https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20261119&selectType=MS&response=json,2026-11-24T07:59:02+00:00
 2026-11-20,8398744,199791,435227267,https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20261120&selectType=MS&response=json,2026-11-24T07:59:01+00:00
 2026-11-23,8530233,172957,433807523,https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20261123&selectType=MS&response=json,2026-11-24T08:16:30+00:00
+2026-11-24,9964974,186613,453505173,https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20261124&selectType=MS&response=json,2026-11-25T01:06:46+00:00

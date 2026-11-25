@@ -156,3 +156,40 @@ def test_R6_single_day_futures(tmp_path):
 def test_R7_pending_margin(tmp_path):
     market.daily(tmp_path,NOW,getter({'tw_margin':json.dumps({'stat':'很抱歉，沒有符合條件的資料!'}).encode()}))
     assert read_status(tmp_path)['tw_margin']['result']=='WAITING'
+
+
+def test_pending_margin_retried_the_following_session(tmp_path):
+    pending = json.dumps({'stat':'很抱歉，沒有符合條件的資料!'}).encode()
+    market.daily(tmp_path, NOW, getter({'tw_margin':pending}))
+    seen = []
+    def read(url):
+        if 'MI_MARGN' in url:
+            seen.append(url)
+            p = json.loads(fixture('tw_margin'))
+            if 'date=20261124' in url:
+                p['date'] = '20261124'
+            return json.dumps(p).encode(), STAMP
+        return getter()(url)
+    market.daily(tmp_path, NOW + dt.timedelta(days=1), read)
+    assert len(seen) == 2
+    assert set(market.read_series(tmp_path,'tw_margin')) == {DAY, DAY+dt.timedelta(days=1)}
+    assert read_status(tmp_path)['tw_margin']['pending_dates'] == ''
+
+
+@pytest.mark.parametrize('status',[307,429])
+def test_download_stops_after_three_rate_limited_attempts(monkeypatch,status):
+    import requests
+    response = requests.Response()
+    response.status_code = status
+    calls = []
+    monkeypatch.setattr(market.time, 'sleep', calls.append)
+    monkeypatch.setattr(requests, 'get', lambda *args, **kwargs: response)
+    with pytest.raises(requests.HTTPError):
+        market.download('https://wwwc.twse.com.tw/')
+    assert calls == [2,5,2,10,2]
+
+
+def test_friday_close_is_still_expected_over_the_weekend():
+    for day in (28,29,30):
+        now = NOW.replace(day=day, hour=18, minute=40)
+        assert market.expected_date('SP500', now) == dt.date(2026,11,27)

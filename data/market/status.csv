@@ -1,13 +1,13 @@
-source,result,data_date,observed_date,expected_date,fresh,stale_kept,source_url,fetched_utc,error,history_start,history_rows,missing_tw_sessions
-tw_index,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://wwwc.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=20261101&response=json,2026-11-24T08:16:24+00:00,,2023-11-01,742,
-otc_index,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingIndex?date=2026/11/01&response=json,2026-11-24T08:16:26+00:00,,2023-11-01,742,
-tw_institution,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://wwwc.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=20261123&type=day&response=json,2026-11-24T08:16:28+00:00,,2023-11-23,84,658
-otc_institution,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://www.tpex.org.tw/www/zh-tw/insti/summary?date=2026/11/23&response=json,2026-11-24T08:16:29+00:00,,2023-11-01,742,0
-tw_margin,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20261123&selectType=MS&response=json,2026-11-24T08:16:30+00:00,,2023-11-23,87,655
-otc_margin,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://www.tpex.org.tw/www/zh-tw/margin/balance?date=2026/11/23&response=json,2026-11-24T08:16:31+00:00,,2023-11-01,742,0
-tx_oi,FAIL,2026-11-23,,2026-11-23,no,yes,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/11/01&queryEndDate=2026/11/23&commodityId=TXF,2026-11-24T08:16:31+00:00,HTTPError: HTTP 429 at https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/11/01&queryEndDate=2026/11/23&commodityId=TXF,2023-12-01,660,82
-SP500,STALE,2026-11-20,2026-11-20,2026-11-23,no,yes,https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500&cosd=2026-10-19,2026-11-24T08:16:32+00:00,最新觀測 2026-11-20，預期 2026-11-23,2023-11-01,767,
-VIXCLS,STALE,2026-11-20,2026-11-20,2026-11-23,no,yes,https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd=2026-10-19,2026-11-24T08:16:32+00:00,最新觀測 2026-11-20，預期 2026-11-23,2023-11-01,789,
-DGS10,STALE,2026-11-20,2026-11-20,2026-11-23,no,yes,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10&cosd=2026-10-19,2026-11-24T08:16:32+00:00,最新觀測 2026-11-20，預期 2026-11-23,2023-11-01,763,
-DFF,STALE,2026-11-20,2026-11-20,2026-11-22,no,yes,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF&cosd=2026-10-18,2026-11-24T08:16:33+00:00,最新觀測 2026-11-20，預期 2026-11-22,2023-11-01,1116,
-DEXTAUS,OK,2026-11-20,2026-11-20,2026-11-20,yes,no,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXTAUS&cosd=2026-10-16,2026-11-24T08:16:33+00:00,,2023-11-01,764,
+source,result,data_date,observed_date,expected_date,fresh,stale_kept,source_url,fetched_utc,error,history_start,history_rows,missing_tw_sessions,pending_dates
+tw_index,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://wwwc.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=20261101&response=json,2026-11-25T01:06:30+00:00,,2023-11-01,743,,
+otc_index,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingIndex?date=2026/11/01&response=json,2026-11-25T01:06:34+00:00,,2023-11-01,743,,
+tw_institution,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://wwwc.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=20261124&type=day&response=json,2026-11-25T01:06:37+00:00,,2023-11-01,592,151,
+otc_institution,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://www.tpex.org.tw/www/zh-tw/insti/summary?date=2026/11/24&response=json,2026-11-25T01:06:44+00:00,,2023-11-01,743,0,
+tw_margin,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20261124&selectType=MS&response=json,2026-11-25T01:06:46+00:00,,2023-11-23,88,655,
+otc_margin,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://www.tpex.org.tw/www/zh-tw/margin/balance?date=2026/11/24&response=json,2026-11-25T01:06:50+00:00,,2023-11-01,743,0,
+tx_oi,OK,2026-11-24,2026-11-24,2026-11-24,yes,no,https://www.taifex.com.tw/cht/3/futContractsDateDown?queryStartDate=2026/11/24&queryEndDate=2026/11/24&commodityId=TXF,2026-11-25T01:06:53+00:00,,2023-11-24,725,18,
+SP500,NORMAL_LAG,2026-11-23,2026-11-23,2026-11-24,no,no,https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500&cosd=2026-10-20,2026-11-25T01:06:56+00:00,最新觀測 2026-11-23，預期 2026-11-24,2023-11-01,768,,
+VIXCLS,NORMAL_LAG,2026-11-23,2026-11-23,2026-11-24,no,no,https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd=2026-10-20,2026-11-25T01:06:58+00:00,最新觀測 2026-11-23，預期 2026-11-24,2023-11-01,790,,
+DGS10,NORMAL_LAG,2026-11-23,2026-11-23,2026-11-24,no,no,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10&cosd=2026-10-20,2026-11-25T01:07:00+00:00,最新觀測 2026-11-23，預期 2026-11-24,2023-11-01,764,,
+DFF,OK,2026-11-23,2026-11-23,2026-11-23,yes,no,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF&cosd=2026-10-19,2026-11-25T01:07:03+00:00,,2023-11-01,1119,,
+DEXTAUS,OK,2026-11-20,2026-11-20,2026-11-20,yes,no,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXTAUS&cosd=2026-10-16,2026-11-25T01:07:06+00:00,,2023-11-01,764,,
