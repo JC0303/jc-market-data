@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install requests pytest holidays==0.109
+      - run: python -m pip install -r requirements.txt
       - run: python -m pytest -q
       - name: 蒐集官方資料並保留失敗狀態
         id: fetch
