@@ -53,3 +53,19 @@ def test_workflow_installs_pinned_requirements():
     assert all('==' in dep for dep in pins)
     assert {'holidays','pytest','requests'} <= {dep.split('==')[0] for dep in pins}
     assert 'pip install -r requirements.txt' in (root/'.github/workflows/market.yml').read_text()
+
+
+def test_first_307_evidence_is_recorded_before_retry(tmp_path):
+    from scripts import r6_backfill as r6
+    response = requests.Response()
+    response.url = 'https://wwwc.twse.com.tw/example'
+    response.status_code = 307
+    response.headers.update({'Location': '/notice', 'X-Probe': 'ok'})
+    response._content = b'A' * 2048 + b'end'
+    path = tmp_path/'diagnosis.md'
+    hook = r6.diagnostic_hook(path)
+    hook(response)
+    hook(response)
+    body = path.read_text()
+    assert body.count('HTTP 307') == 1 and 'X-Probe: ok' in body and '/notice' in body
+    assert 'A'*2048 in body and 'AAAend' not in body
