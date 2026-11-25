@@ -86,12 +86,12 @@ def test_bad_daily_table_preserves_previous_file_and_fails(tmp_path, fault):
 
 
 def test_stale_fred_is_independent_of_taiwan_sessions(tmp_path):
-    body = fixture("SP500").split(b"2026-11-20")[0]
+    body = fixture("SP500").split(b"2026-11-19")[0]
     assert market.daily(tmp_path, NOW, getter({"SP500": body})) == 1
     s = read_status(tmp_path)["SP500"]
-    assert (s["result"], s["observed_date"], s["expected_date"]) == ("STALE", "2026-11-19", "2026-11-20")
+    assert (s["result"], s["observed_date"], s["expected_date"]) == ("STALE", "2026-11-18", "2026-11-20")
     assert "STALE" in (tmp_path / "freshness.csv").read_text()
-    assert not (tmp_path / "SP500.csv").exists()
+    assert (tmp_path / "SP500.csv").exists()
 
 
 def test_consensus_holiday_requires_fresh_responses_from_every_tw_source(tmp_path, monkeypatch):

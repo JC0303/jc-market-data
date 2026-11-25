@@ -27,3 +27,11 @@ def endpoint(name, start, end):
         "tx_oi": ("https://www.taifex.com.tw/cht/3/futContractsDateDown?"
                   f"queryStartDate={slash}&queryEndDate={end:%Y/%m/%d}&commodityId=TXF"),
     }[name]
+
+# 容忍值是本系統的檢查政策，以美國發布營業日計。
+# SP500/VIXCLS 為收盤序列；FRED 隔日取得資料仍可能晚於台北晚間排程。
+# https://fred.stlouisfed.org/series/SP500  https://fred.stlouisfed.org/series/VIXCLS
+# H.15 每營業日、EFFR 次營業日發布；H.10 每週首個營業日發布前週資料。
+# https://www.federalreserve.gov/releases/h15/  https://www.newyorkfed.org/markets/reference-rates/effr
+# https://www.federalreserve.gov/releases/h10/
+FRED_GRACE = {"SP500": 1, "VIXCLS": 1, "DGS10": 1, "DFF": 1, "DEXTAUS": 1}

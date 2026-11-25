@@ -13,12 +13,14 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+import holidays
+from functools import lru_cache
 
 if __package__:
-    from .market_sources import COLUMNS, DAILY, FRED, INDEX, endpoint
+    from .market_sources import COLUMNS, DAILY, FRED, FRED_GRACE, INDEX, endpoint
     from .fetch_tw import TPE, expected_trading_day
 else:
-    from market_sources import COLUMNS, DAILY, FRED, INDEX, endpoint
+    from market_sources import COLUMNS, DAILY, FRED, FRED_GRACE, INDEX, endpoint
     from fetch_tw import TPE, expected_trading_day
 
 OUT = Path(__file__).resolve().parents[1] / "data/market"
@@ -192,8 +194,21 @@ def observations(name, start, end, getter=download):
             for day, vals in rows.items() if start <= day <= end}
 
 
-def weekday(day):
-    while day.weekday() >= 5:
+@lru_cache(maxsize=16)
+def closures(name, year):
+    if name in ("SP500", "VIXCLS"):
+        return holidays.financial_holidays("NYSE", years=year)
+    # Federal Reserve Banks remain open Friday before a Saturday holiday.
+    return {d for d in holidays.US(years=year) if not (
+        d.weekday() == 4 and "observed" in holidays.US(years=year)[d].lower())}
+
+
+def us_business(name, day):
+    return day.weekday() < 5 and day not in closures(name, day.year)
+
+
+def prior_session(name, day):
+    while not us_business(name, day):
         day -= dt.timedelta(days=1)
     return day
 
@@ -202,16 +217,23 @@ def expected_date(name, now):
     if name not in FRED:
         return expected_trading_day(now.astimezone(TPE))
     ny = now.astimezone(ZoneInfo("America/New_York"))
-    day = ny.date()
+    cutoff = {"DFF": dt.time(9), "DEXTAUS": dt.time(16, 15)}.get(name, dt.time(19))
+    day = ny.date() - dt.timedelta(days=ny.time() < cutoff)
+    release = prior_session(name, day)
     if name == "DEXTAUS":
-        monday = day - dt.timedelta(days=day.weekday())
-        if day == monday and ny.time() < dt.time(16, 15):
-            monday -= dt.timedelta(days=7)
-        return monday - dt.timedelta(days=3)
+        monday = release - dt.timedelta(days=release.weekday())
+        return prior_session(name, monday - dt.timedelta(days=1))
     if name == "DFF":
-        release = weekday(day if ny.hour >= 9 else day - dt.timedelta(days=1))
         return release - dt.timedelta(days=1)
-    return weekday(day if ny.hour >= 19 else day - dt.timedelta(days=1))
+    return release
+
+
+def tolerated_date(name, now):
+    local = now.astimezone(ZoneInfo("America/New_York"))
+    day = local.date()
+    for _ in range(FRED_GRACE[name]):
+        day = prior_session(name, day - dt.timedelta(days=1))
+    return expected_date(name, dt.datetime.combine(day, local.time(), local.tzinfo))
 
 
 def read_series(out, name):
@@ -263,13 +285,23 @@ def daily(out, now, getter=download, history_problems=None):
             r["error"] = f"回補失敗 {len(errors)} 個請求；首筆 {errors[0]}"
             continue
         try:
-            new = observations(name, start, expected, getter)
+            end = now.astimezone(ZoneInfo("America/New_York")).date() if name in FRED else expected
+            new = observations(name, start, end, getter)
             if not new:
                 raise ValueError("指定區間回空表")
             latest = max(new)
             r.update(observed_date=latest, fetched_utc=new[latest]["fetched_utc"])
             if name in INDEX:
                 index_days[name.split("_")[0]] = latest
+            if name in FRED:
+                save_series(out, name, old, new)
+                r.update(data_date=max(old), stale_kept="no")
+                if latest < expected:
+                    result = "NORMAL_LAG" if latest >= tolerated_date(name, now) else "STALE"
+                    r.update(result=result, error=f"最新觀測 {latest}，預期 {expected}")
+                else:
+                    r.update(result="OK", fresh="yes")
+                continue
             if latest != expected:
                 r.update(result="STALE", error=f"最新觀測 {latest}，預期 {expected}")
                 continue
@@ -283,7 +315,7 @@ def daily(out, now, getter=download, history_problems=None):
         for r in tw:
             r["result"] = "HOLIDAY_SUSPECT"
     results = {r["result"] for r in status.values()}
-    verdict = next(v for v in ("FAIL", "STALE", "HOLIDAY_SUSPECT", "OK") if v in results)
+    verdict = next(v for v in ("FAIL", "STALE", "HOLIDAY_SUSPECT", "OK") if v in results or v == "OK")
     calendars = {n: read_series(out, n).keys() for n in INDEX}
     for name, r in status.items():
         dates = read_series(out, name).keys()
