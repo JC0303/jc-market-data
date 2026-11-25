@@ -25,7 +25,8 @@ else:
 
 OUT = Path(__file__).resolve().parents[1] / "data/market"
 STATUS = ("source", "result", "data_date", "observed_date", "expected_date", "fresh", "stale_kept",
-          "source_url", "fetched_utc", "error", "history_start", "history_rows", "missing_tw_sessions", "pending_dates")
+          "source_url", "fetched_utc", "error", "history_start", "history_rows", "missing_tw_sessions", "pending_dates",
+          "backfill_result", "backfill_attempted", "backfill_added", "backfill_error")
 
 
 def number(value):
@@ -428,7 +429,11 @@ def main():
             parser.error("歷史起點晚於預期交易日")
         problems = backfill(OUT, args.backfill_from, end)
         now = dt.datetime.now(dt.timezone.utc)
-    return daily(OUT, now, history_problems=problems)
+    result = daily(OUT, now, history_problems=problems)
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+            print("status_written=true", file=output)
+    return result
 
 
 if __name__ == "__main__":

@@ -35,3 +35,6 @@ def endpoint(name, start, end):
 # https://www.federalreserve.gov/releases/h15/  https://www.newyorkfed.org/markets/reference-rates/effr
 # https://www.federalreserve.gov/releases/h10/
 FRED_GRACE = {"SP500": 1, "VIXCLS": 1, "DGS10": 1, "DFF": 1, "DEXTAUS": 1}
+
+# 每個來源每輪最多補幾個交易日；0 關閉。
+TRICKLE_LIMIT = 20

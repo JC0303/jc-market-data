@@ -255,3 +255,24 @@ def test_trickle_is_bounded_and_isolates_307(tmp_path,monkeypatch,limit):
         assert 'dayDate=20261102' in next(u for n,u in calls if n=='tw_institution')
     else:
         assert not calls
+
+
+@pytest.mark.parametrize('timeout_type', ['ConnectTimeout', 'ReadTimeout'])
+def test_exhausted_fred_retry_keeps_last_verified_file(tmp_path,monkeypatch,timeout_type):
+    import requests
+    market.daily(tmp_path,NOW,getter())
+    path=tmp_path/'SP500.csv'
+    previous=path.read_bytes()
+    waits=[]
+    attempts=[]
+    monkeypatch.setattr(market.time,'sleep',waits.append)
+    def timeout(url, **kwargs):
+        attempts.append(kwargs['timeout'])
+        raise getattr(requests,timeout_type)()
+    monkeypatch.setattr(requests,'get',timeout)
+    def fetch(url):
+        return market.download(url) if 'id=SP500&' in url else getter()(url)
+    assert market.daily(tmp_path,NOW,fetch)==1
+    assert read_status(tmp_path)['SP500']['result']=='FAIL'
+    assert attempts==[(10,90)]*3 and [s for s in waits if s!=2]==[10,20]
+    assert path.read_bytes()==previous
