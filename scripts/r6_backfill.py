@@ -1,5 +1,6 @@
 """一次只處理指定來源的缺日，遇到拒絕或無法驗證的資料即停批。"""
 import argparse
+from pathlib import Path
 
 import requests
 
@@ -13,6 +14,31 @@ PAGES = {
     "tw_institution": "https://wwwc.twse.com.tw/zh/trading/foreign/bfi82u.html",
     "tx_oi": "https://www.taifex.com.tw/cht/3/futContractsDateView",
 }
+
+
+def diagnostic_hook(path):
+    recorded = False
+
+    def capture(response, **kwargs):
+        nonlocal recorded
+        if recorded or response.status_code != 307:
+            return
+        recorded = True
+        raw = getattr(response.raw, "headers", None)
+        headers = raw or response.headers
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            print(f"\n## 首次 HTTP 307\n\n{market.utc_stamp()} GET {response.url}", file=handle)
+            print(f"Location = {response.headers.get('Location', '（無）')}\n", file=handle)
+            for key in headers:
+                values = raw.getlist(key) if raw else [headers[key]]
+                for value in values:
+                    if key.lower() == "set-cookie":
+                        value = "[公開版遮蔽工作階段值]"
+                    print(f"    {key}: {value}", file=handle)
+            print("\n~~~~", response.content[:2048].decode("utf-8", "backslashreplace"),
+                  "~~~~", sep="\n", file=handle)
+    return capture
 
 
 def session_getter(name, client):
@@ -57,6 +83,7 @@ def main():
     if not missing:
         return 0
     with requests.Session() as client:
+        client.hooks["response"].append(diagnostic_hook(Path("results/r6_307_diagnosis.md")))
         getter = session_getter(args.source, client)
         sample = collect(args.source, missing[:10], market.OUT, getter)
         for result in sample:
