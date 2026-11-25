@@ -159,10 +159,17 @@ def utc_stamp():
 
 
 def download(url, client=requests, headers=None):
+    is_fred = url.startswith("https://fred.stlouisfed.org/graph/fredgraph.csv?")
     for attempt in range(3):
         time.sleep(2)
-        response = client.get(url, timeout=(10, 35), allow_redirects=False,
-                              headers=headers or {"User-Agent": "jc-market-data public research"})
+        try:
+            response = client.get(url, timeout=(10, 90 if is_fred else 35), allow_redirects=False,
+                                  headers=headers or {"User-Agent": "jc-market-data public research"})
+        except (requests.ReadTimeout, requests.ConnectTimeout):
+            if not is_fred or attempt == 2:
+                raise
+            time.sleep(10 * (attempt + 1))
+            continue
         if response.status_code not in (307, 429) or attempt == 2:
             break
         wait = response.headers.get("Retry-After", "")
