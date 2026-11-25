@@ -193,3 +193,26 @@ def test_friday_close_is_still_expected_over_the_weekend():
     for day in (28,29,30):
         now = NOW.replace(day=day, hour=18, minute=40)
         assert market.expected_date('SP500', now) == dt.date(2026,11,27)
+
+
+def test_fred_read_timeout_recovers_to_ok(tmp_path, monkeypatch):
+    import requests
+    waits = []
+    attempts = []
+    monkeypatch.setattr(market.time, 'sleep', waits.append)
+    def get(url, **kwargs):
+        attempts.append(kwargs['timeout'])
+        if len(attempts) == 1:
+            raise requests.ReadTimeout()
+        response = requests.Response()
+        response.status_code = 200
+        response._content = fixture('SP500')
+        return response
+    monkeypatch.setattr(requests, 'get', get)
+    def fetch(url):
+        if 'id=SP500&' in url:
+            return market.download(url)
+        return getter()(url)
+    market.daily(tmp_path,NOW,fetch)
+    assert read_status(tmp_path)['SP500']['result'] == 'OK'
+    assert attempts == [(10,90), (10,90)] and 10 in waits
