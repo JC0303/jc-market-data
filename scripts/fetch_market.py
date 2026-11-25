@@ -25,7 +25,7 @@ else:
 
 OUT = Path(__file__).resolve().parents[1] / "data/market"
 STATUS = ("source", "result", "data_date", "observed_date", "expected_date", "fresh", "stale_kept",
-          "source_url", "fetched_utc", "error", "history_start", "history_rows", "missing_tw_sessions")
+          "source_url", "fetched_utc", "error", "history_start", "history_rows", "missing_tw_sessions", "pending_dates")
 
 
 def number(value):
@@ -266,6 +266,12 @@ def save_series(out, name, rows, new):
 
 def daily(out, now, getter=download, history_problems=None):
     out.mkdir(parents=True, exist_ok=True)
+    pending = set()
+    if (out / "status.csv").exists():
+        with (out / "status.csv").open() as handle:
+            for row in csv.DictReader(handle):
+                if row["source"] == "tw_margin":
+                    pending.update(dt.date.fromisoformat(d) for d in row.get("pending_dates", "").split() if d)
     status, index_days = {}, {}
     for name in COLUMNS:
         expected = expected_date(name, now)
@@ -284,6 +290,15 @@ def daily(out, now, getter=download, history_problems=None):
             errors = history_problems[name]
             r["error"] = f"回補失敗 {len(errors)} 個請求；首筆 {errors[0]}"
             continue
+        retry_errors = []
+        if name == "tw_margin":
+            for day in sorted(d for d in pending if d < expected):
+                try:
+                    recovered = observations(name, day, day, getter)
+                    save_series(out, name, old, recovered)
+                    pending.remove(day)
+                except (ValueError, KeyError, TypeError, IndexError, AttributeError, csv.Error, requests.RequestException) as exc:
+                    retry_errors.append(f"{day}: {exc}")
         try:
             end = now.astimezone(ZoneInfo("America/New_York")).date() if name in FRED else expected
             new = observations(name, start, end, getter)
@@ -309,6 +324,19 @@ def daily(out, now, getter=download, history_problems=None):
             r.update(result="OK", data_date=latest, fresh="yes", stale_kept="no")
         except (ValueError, TypeError, KeyError, IndexError, AttributeError, csv.Error, requests.RequestException) as exc:
             r["error"] = f"{type(exc).__name__}: {exc}"
+            if (name == "tw_margin" and start == expected == now.astimezone(TPE).date()
+                    and str(exc).rstrip("!！") == "交易所狀態 很抱歉，沒有符合條件的資料"):
+                pending.add(expected)
+                r.update(result="WAITING", error="證交所尚未發布當日餘額")
+        if name == "tw_margin":
+            if r["result"] == "OK":
+                pending.discard(expected)
+            if retry_errors:
+                if r["result"] in ("OK", "WAITING"):
+                    r.update(result="STALE", fresh="no")
+                r["error"] += " 補抓未完成 " + " / ".join(retry_errors)
+            r["pending_dates"] = " ".join(map(str, sorted(pending)))
+            r["data_date"] = max(old, default="")
     tw = [status[n] for n in COLUMNS if n not in FRED]
     holiday = all(r["result"] == "STALE" for r in tw) and len({r["observed_date"] for r in tw}) == 1
     if holiday:
