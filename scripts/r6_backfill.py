@@ -1,5 +1,5 @@
 """一次只處理指定來源的缺日，遇到拒絕或無法驗證的資料即停批。"""
-import time
+import argparse
 
 import requests
 
@@ -23,18 +23,7 @@ def session_getter(name, client):
         raise requests.HTTPError(f"首頁 HTTP {response.status_code}", response=response)
 
     def get(url):
-        for attempt in range(3):
-            time.sleep(2)
-            response = client.get(url, headers={"Referer": page}, allow_redirects=False, timeout=(10, 35))
-            if response.status_code == 200:
-                return response.content, market.utc_stamp()
-            if response.status_code not in (307, 429) or attempt == 2:
-                break
-            wait = response.headers.get("Retry-After", "")
-            if wait and (not wait.isdigit() or int(wait) > 120):
-                break
-            time.sleep(max(5 * 2 ** attempt, int(wait or 0)))
-        raise requests.HTTPError(f"HTTP {response.status_code}", response=response)
+        return market.download(url, client=client, headers={"Referer": page})
     return get
 
 
@@ -57,3 +46,30 @@ def collect(name, days, out, getter):
         market.save_series(out, name, archive, new)
         results.append((day, 200, "OK"))
     return results
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("source", choices=PAGES)
+    parser.add_argument("--expand", action="store_true", help="十日全部驗證成功後繼續同一批次")
+    args = parser.parse_args()
+    dates = market.read_series(market.OUT, "tw_index").keys()
+    missing = sorted(dates - market.read_series(market.OUT, args.source).keys())
+    if not missing:
+        return 0
+    with requests.Session() as client:
+        getter = session_getter(args.source, client)
+        sample = collect(args.source, missing[:10], market.OUT, getter)
+        for result in sample:
+            print(*result, flush=True)
+        if any(status != 200 for _, status, _ in sample):
+            return 1
+        if len(sample) == 10 and args.expand:
+            for day, status, detail in collect(args.source, missing[10:], market.OUT, getter):
+                print(day, status, detail, flush=True)
+                if status != 200:
+                    return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

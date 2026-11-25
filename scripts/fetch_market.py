@@ -158,11 +158,11 @@ def utc_stamp():
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
 
-def download(url):
+def download(url, client=requests, headers=None):
     for attempt in range(3):
         time.sleep(2)
-        response = requests.get(url, timeout=(10, 35), allow_redirects=False,
-                                headers={"User-Agent": "jc-market-data public research"})
+        response = client.get(url, timeout=(10, 35), allow_redirects=False,
+                              headers=headers or {"User-Agent": "jc-market-data public research"})
         if response.status_code not in (307, 429) or attempt == 2:
             break
         wait = response.headers.get("Retry-After", "")

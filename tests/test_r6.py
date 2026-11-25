@@ -22,7 +22,7 @@ class Client:
 def test_session_uses_official_page_then_same_client(monkeypatch):
     from scripts import r6_backfill as r6
     client = Client()
-    monkeypatch.setattr(r6.time, 'sleep', lambda seconds: None)
+    monkeypatch.setattr(market.time, 'sleep', lambda seconds: None)
     get = r6.session_getter('tw_margin', client)
     try:
         get('https://wwwc.twse.com.tw/rwd/zh/marginTrading/MI_MARGN')
@@ -36,7 +36,7 @@ def test_session_uses_official_page_then_same_client(monkeypatch):
 def test_repeated_307_stops_batch_without_touching_archive(tmp_path, monkeypatch):
     from scripts import r6_backfill as r6
     client = Client()
-    monkeypatch.setattr(r6.time, 'sleep', lambda seconds: None)
+    monkeypatch.setattr(market.time, 'sleep', lambda seconds: None)
     path = tmp_path / 'tw_margin.csv'
     row = dict(date='2026-11-20', financing_units=1, short_units=2, financing_thousand_twd=3,
                source_url='https://wwwc.twse.com.tw/', fetched_utc='2026-11-20T12:00:00+00:00')
