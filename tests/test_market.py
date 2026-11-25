@@ -216,3 +216,42 @@ def test_fred_read_timeout_recovers_to_ok(tmp_path, monkeypatch):
     market.daily(tmp_path,NOW,fetch)
     assert read_status(tmp_path)['SP500']['result'] == 'OK'
     assert attempts == [(10,90), (10,90)] and 10 in waits
+
+
+@pytest.mark.parametrize('limit',[0,2])
+def test_trickle_is_bounded_and_isolates_307(tmp_path,monkeypatch,limit):
+    import requests
+    from scripts import market_sources, r6_backfill as r6
+    market.daily(tmp_path,NOW,getter())
+    before=read_status(tmp_path)
+    calls=[]
+    diag=tmp_path/'diagnosis.md'
+    def open_source(name,client):
+        assert limit
+        def fetch(url):
+            calls.append((name,url))
+            if name=='tw_institution':
+                resp=requests.Response()
+                resp.url=url
+                resp.status_code=307
+                resp.headers['Location']='/notice'
+                resp._content=b'official notice'
+                for hook in client.hooks['response']:
+                    hook(resp)
+                raise requests.HTTPError(response=resp)
+            return getter()(url)
+        return fetch
+    monkeypatch.setattr(market_sources,'TRICKLE_LIMIT',limit,raising=False)
+    monkeypatch.setattr(r6,'session_getter',open_source)
+    r6.trickle(tmp_path,diag)
+    after=read_status(tmp_path)
+    assert all(after[n]['result']==r['result'] for n,r in before.items())
+    if limit:
+        assert diag.exists() and 'official notice' in diag.read_text()
+        assert sum(n=='tw_institution' for n,_ in calls)==1
+        assert after['tw_institution']['backfill_result']=='FAIL'
+        assert any(n=='tw_margin' for n,_ in calls)
+        assert all(sum(n==source for n,_ in calls)<=limit for source in r6.PAGES)
+        assert 'dayDate=20261102' in next(u for n,u in calls if n=='tw_institution')
+    else:
+        assert not calls
