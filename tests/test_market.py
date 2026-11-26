@@ -276,3 +276,76 @@ def test_exhausted_fred_retry_keeps_last_verified_file(tmp_path,monkeypatch,time
     assert read_status(tmp_path)['SP500']['result']=='FAIL'
     assert attempts==[(10,90)]*3 and [s for s in waits if s!=2]==[10,20]
     assert path.read_bytes()==previous
+
+
+def fred_api_response(name, status=200):
+    import requests
+    lines = fixture(name).decode().splitlines()[1:]
+    obs = [dict(realtime_start="2026-11-23", realtime_end="2026-11-23", date=d, value=v or ".")
+           for d, v in (line.split(",") for line in lines)]
+    response = requests.Response()
+    response.status_code = status
+    response._content = json.dumps(dict(observations=obs) if status == 200 else
+                                    dict(error_code=400, error_message="Bad Request.")).encode()
+    return response
+
+
+def test_fred_api_key_uses_official_api_and_keeps_key_out_of_public_files(tmp_path, monkeypatch):
+    import requests
+    key = "abcdefghijklmnopqrstuvwxyz123456"
+    monkeypatch.setenv("FRED_API_KEY", key)
+    monkeypatch.setattr(market.time, "sleep", lambda s: None)
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs.get("params")))
+        return fred_api_response(kwargs["params"]["series_id"])
+    monkeypatch.setattr(requests, "get", get)
+
+    def fetch(url):
+        return market.download(url) if "fredgraph" in url else getter()(url)
+    market.daily(tmp_path, NOW, fetch)
+    status = read_status(tmp_path)
+    assert [status[n]["result"] for n in market.FRED] == ["OK"] * 5
+    assert {u for u, _ in calls} == {"https://api.stlouisfed.org/fred/series/observations"}
+    assert all(p["api_key"] == key and p["file_type"] == "json" for _, p in calls)
+    assert sorted(p["series_id"] for _, p in calls) == sorted(market.FRED)
+    assert market.read_series(tmp_path, "SP500")[dt.date(2026, 11, 20)]["value"] == "6910.39"
+    for path in tmp_path.iterdir():
+        assert key not in path.read_text()
+    assert "fredgraph.csv?id=SP500&cosd=" in status["SP500"]["source_url"]
+
+
+@pytest.mark.parametrize("failure", ["connection", "http400"])
+def test_fred_api_errors_never_reveal_the_key(monkeypatch, failure):
+    import requests
+    key = "abcdefghijklmnopqrstuvwxyz123456"
+    monkeypatch.setenv("FRED_API_KEY", key)
+    monkeypatch.setattr(market.time, "sleep", lambda s: None)
+
+    def get(url, **kwargs):
+        if failure == "connection":
+            raise requests.ConnectionError(f"Max retries exceeded with url: /fred?api_key={key}")
+        return fred_api_response("SP500", status=400)
+    monkeypatch.setattr(requests, "get", get)
+    with pytest.raises(requests.RequestException) as caught:
+        market.download(market.endpoint("SP500", DAY, DAY))
+    assert key not in str(caught.value) and key not in repr(caught.value.__cause__)
+
+
+def test_without_key_fred_still_uses_the_public_csv(monkeypatch):
+    import requests
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    monkeypatch.setattr(market.time, "sleep", lambda s: None)
+    seen = []
+
+    def get(url, **kwargs):
+        seen.append(url)
+        response = requests.Response()
+        response.status_code = 200
+        response._content = fixture("SP500")
+        return response
+    monkeypatch.setattr(requests, "get", get)
+    body, _ = market.download(market.endpoint("SP500", DAY, DAY))
+    assert seen[0].startswith("https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500&")
+    assert body == fixture("SP500")
