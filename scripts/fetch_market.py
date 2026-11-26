@@ -10,6 +10,7 @@ import tempfile
 import time
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.parse import parse_qsl, urlsplit
 from zoneinfo import ZoneInfo
 
 import requests
@@ -163,12 +164,39 @@ def utc_stamp():
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
 
+FRED_GRAPH = "https://fred.stlouisfed.org/graph/fredgraph.csv?"
+FRED_API = "https://api.stlouisfed.org/fred/series/observations"
+
+
+def fred_api_csv(name, body):
+    """把官方 API 的 JSON 轉成與 fredgraph.csv 相同的兩欄格式，交給 parse_fred 做同一套驗證。"""
+    lines = [f"observation_date,{name}"]
+    for obs in json.loads(body)["observations"]:
+        lines.append(f"{obs['date']},{obs['value']}")
+    return ("\n".join(lines) + "\n").encode()
+
+
 def download(url, client=requests, headers=None):
-    is_fred = url.startswith("https://fred.stlouisfed.org/graph/fredgraph.csv?")
+    """有 FRED_API_KEY 時改走 FRED 官方 API；公開檔案與錯誤訊息只記公開的 fredgraph 網址，不含金鑰。"""
+    is_fred = url.startswith(FRED_GRAPH)
+    key = os.environ.get("FRED_API_KEY", "").strip() if is_fred else ""
+    if not key:
+        return _download(url, url, None, is_fred, client, headers)
+    query = dict(parse_qsl(urlsplit(url).query))
+    params = dict(series_id=query["id"], observation_start=query["cosd"], file_type="json", api_key=key)
+    try:
+        body, stamp = _download(FRED_API, url, params, True, client, headers)
+    except requests.RequestException as exc:
+        # 只保留遮掉金鑰的訊息與回應狀態碼；原例外的 request 物件含金鑰網址，不往外傳。
+        raise type(exc)(str(exc).replace(key, "***"), response=exc.response) from None
+    return fred_api_csv(query["id"], body), stamp
+
+
+def _download(target, url, params, is_fred, client, headers):
     for attempt in range(3):
         time.sleep(2)
         try:
-            response = client.get(url, timeout=(10, 90 if is_fred else 35), allow_redirects=False,
+            response = client.get(target, params=params, timeout=(10, 90 if is_fred else 35), allow_redirects=False,
                                   headers=headers or {"User-Agent": "jc-market-data public research"})
         except (requests.ReadTimeout, requests.ConnectTimeout):
             if not is_fred or attempt == 2:
@@ -182,7 +210,13 @@ def download(url, client=requests, headers=None):
             break
         time.sleep(max(5 * 2 ** attempt, int(wait or 0)))
     if response.status_code != 200:
-        raise requests.HTTPError(f"HTTP {response.status_code} at {url}", response=response)
+        detail = ""
+        if params:
+            try:
+                detail = " " + str(json.loads(response.content).get("error_message", ""))[:200]
+            except (ValueError, AttributeError):
+                pass
+        raise requests.HTTPError(f"HTTP {response.status_code} at {url}{detail}", response=response)
     return response.content, utc_stamp()
 
 

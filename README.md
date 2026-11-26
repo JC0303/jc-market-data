@@ -27,4 +27,4 @@ GitHub Actions 每週一至五台北 18:40 排程更新 `data/market/`。每列�
 
 2026-11-25 更新：FRED 已驗證的觀測會寫入原始資料日。NORMAL_LAG 表示在該序列容忍的發布時差內，超過才列 STALE。各序列政策與官方發布依據在 `scripts/market_sources.py`。上市信用交易官方回覆當日尚無資料會列 WAITING；未公布日列在 status.csv 的 pending_dates，下次執行會再查。當日狀態與三年歷史缺日數分開記錄。
 
-每次每日抓取寫出狀態後，涓流回補會從各來源最早的缺日開始，處理上市法人、上市融資融券與台指期。三者各自受 `market_sources.TRICKLE_LIMIT` 限制，預設 20，設為 0 則不發送回補請求。首個 307 或 429 會停止該來源，並把診斷附在 `results/r6_307_diagnosis.md`。請以 status.csv 的 result 判讀每日資料；backfill_result、backfill_attempted、backfill_added、backfill_error 分別記錄本輪回補狀態、已查日期數、新增日期數及原因。FRED 的連線與讀取逾時最多重試兩次，各等候 10 秒與 20 秒，單次讀取上限 90 秒。
+每次每日抓取寫出狀態後，涓流回補會從各來源最早的缺日開始，處理上市法人、上市融資融券與台指期。三者各自受 `market_sources.TRICKLE_LIMIT` 限制，預設 20，設為 0 則不發送回補請求。首個 307 或 429 會停止該來源，並把診斷附在 `results/r6_307_diagnosis.md`。請以 status.csv 的 result 判讀每日資料；backfill_result、backfill_attempted、backfill_added、backfill_error 分別記錄本輪回補狀態、已查日期數、新增日期數及原因。2026-11-26 起：repo secret `FRED_API_KEY` 存在時，五個 FRED 序列改走官方 API（api.stlouisfed.org），金鑰只在執行時讀取，公開資料的 source_url 與錯誤訊息都只記公開的 fredgraph.csv 網址；沒有金鑰時沿用 fredgraph.csv。FRED 的連線與讀取逾時最多重試兩次，各等候 10 秒與 20 秒，單次讀取上限 90 秒。

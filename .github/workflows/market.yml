@@ -28,6 +28,8 @@ jobs:
       - run: python -m pytest -q
       - name: 蒐集官方資料並保留失敗狀態
         id: fetch
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           set -o pipefail
           python scripts/fetch_market.py | tee "$RUNNER_TEMP/market.log"
