@@ -38,3 +38,18 @@ FRED_GRACE = {"SP500": 1, "VIXCLS": 1, "DGS10": 1, "DFF": 1, "DEXTAUS": 1}
 
 # 每個來源每輪最多補幾個交易日；0 關閉。
 TRICKLE_LIMIT = 20
+
+# 期交所三大法人期貨表只提供近三年；更早的日期回傳非 CSV 頁面，永遠補不到。
+# 證據：2026-11-25 回補 2023-11-01..23 全部失敗，2023-11-24 起有資料。
+SOURCE_YEARS = {"tx_oi": 3}
+
+
+def oldest_servable(name, today):
+    """來源還提供的最早日期；沒有保存期限的來源回 None。"""
+    years = SOURCE_YEARS.get(name)
+    if years is None:
+        return None
+    try:
+        return today.replace(year=today.year - years)
+    except ValueError:  # 2/29
+        return today.replace(year=today.year - years, day=28)

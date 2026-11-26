@@ -1,7 +1,9 @@
 """一次只處理指定來源的缺日，遇到拒絕或無法驗證的資料即停批。"""
 import argparse
 import csv
+import datetime as dt
 import sys
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import requests
@@ -86,7 +88,10 @@ def trickle(out, diagnostic_path):
         if name not in PAGES:
             continue
         old = market.read_series(out, name)
-        dates = sorted(calendar - old.keys())[:market_sources.TRICKLE_LIMIT]
+        missing = sorted(calendar - old.keys())
+        floor = market_sources.oldest_servable(name, dt.datetime.now(ZoneInfo("Asia/Taipei")).date())
+        expired = [d for d in missing if floor and d < floor]
+        dates = [d for d in missing if d not in expired][:market_sources.TRICKLE_LIMIT]
         added = attempted = 0
         errors = []
         if dates:
@@ -115,8 +120,12 @@ def trickle(out, diagnostic_path):
                 except requests.RequestException as exc:
                     errors.append(str(exc))
         result = "DISABLED" if market_sources.TRICKLE_LIMIT == 0 else "OK"
+        notes = list(errors)
+        if expired:
+            # 仍算在 missing_tw_sessions 裡，只是不再請求；不算失敗。
+            notes.append(f"{len(expired)} 天早於 {floor}，超出來源近三年保存範圍，不再嘗試")
         row.update(backfill_result="FAIL" if errors else result,
-                   backfill_attempted=attempted, backfill_added=added, backfill_error=" / ".join(errors),
+                   backfill_attempted=attempted, backfill_added=added, backfill_error=" / ".join(notes),
                    history_rows=len(old), history_start=min(old, default=""),
                    missing_tw_sessions=len(calendar - old.keys()))
         print(name, row["backfill_result"], f"{added}/{attempted}", row["backfill_error"], flush=True)

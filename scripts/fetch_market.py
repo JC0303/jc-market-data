@@ -115,7 +115,11 @@ def parse_exchange(name, body):
 
 def parse_futures(body):
     fields = ("多方未平倉口數", "空方未平倉口數", "多空未平倉口數淨額")
-    reader = csv.DictReader(io.StringIO(body.decode("cp950")))
+    try:
+        text = body.decode("cp950")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"期交所回傳的不是 CSV（cp950 解碼失敗：{exc.reason}），可能是查詢範圍外的說明頁") from exc
+    reader = csv.DictReader(io.StringIO(text))
     if set(("日期", "商品名稱", "身份別", *fields)) - set(reader.fieldnames or ()):
         raise ValueError("期貨 CSV 缺少必要欄位")
     days = {}
