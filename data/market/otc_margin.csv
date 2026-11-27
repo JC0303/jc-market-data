@@ -744,3 +744,4 @@ date,financing_units,short_units,financing_thousand_twd,source_url,fetched_utc
 2026-11-24,1873073,22049,128846729,https://www.tpex.org.tw/www/zh-tw/margin/balance?date=2026/11/24&response=json,2026-11-25T01:33:29+00:00
 2026-11-25,1857229,19688,127877669,https://www.tpex.org.tw/www/zh-tw/margin/balance?date=2026/11/25&response=json,2026-11-25T20:09:15+00:00
 2026-11-26,1866763,21233,129688392,https://www.tpex.org.tw/www/zh-tw/margin/balance?date=2026/11/26&response=json,2026-11-26T19:48:40+00:00
+2026-11-27,1863255,22393,130004210,https://www.tpex.org.tw/www/zh-tw/margin/balance?date=2026/11/27&response=json,2026-11-27T19:38:28+00:00
