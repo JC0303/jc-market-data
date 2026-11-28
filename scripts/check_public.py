@@ -68,12 +68,29 @@ def check_series(path):
 
 
 
+def _secret_scan():
+    if __name__ == "__main__":
+        import secret_scan
+    else:
+        from scripts import secret_scan
+    return secret_scan
+
+
 def problems():
     found = []
+    scan = _secret_scan()
+    known = scan._known_values()
     for path in sorted(ROOT.rglob('*')):
         if '.git' in path.parts or not path.is_file():
             continue
+        if {'__pycache__', '.pytest_cache'} & set(path.parts):
+            continue  # local caches are git-ignored and never published
         rel = path.relative_to(ROOT).as_posix()
+        # JC 2026-11-28: never leave an API key public. Checked in every file, data included.
+        found.extend(f'{rel}: {msg}' for msg in scan.check_path(rel))
+        if path.stat().st_size <= scan.MAX_BYTES:
+            for no, kind in scan.find_secrets(path.read_text(encoding='utf-8', errors='replace'), known):
+                found.append(f'{rel}:{no}: possible {kind} (API keys must never be public)')
         if rel.startswith('data/') and rel not in ALLOWED_DATA:
             found.append(f'{rel}: not an approved public market-data file')
         if rel.startswith('data/market/') and rel in ALLOWED_DATA and path.stem not in ('status', 'freshness'):

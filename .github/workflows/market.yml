@@ -38,6 +38,9 @@ jobs:
         run: python scripts/r6_backfill.py --trickle
       - name: 檢查公開資料並提交本次狀態
         if: "!cancelled() && (steps.fetch.outcome == 'success' || steps.fetch.outcome == 'failure')"
+        env:
+          # Only so check_public.py can confirm the real key value is in no file (JC 2026-11-28).
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           set -euo pipefail
           python scripts/check_public.py
